@@ -53,32 +53,32 @@ namespace GetDestinationServicesNimbra_1
 {
 	using System;
 	using System.Collections.Generic;
-	using System.Globalization;
-	using System.Text;
-	using Skyline.DataMiner.Automation;
-
-	using System;
-	using System.Collections.Generic;
 	using System.Linq;
 	using Skyline.DataMiner.Analytics.GenericInterface;
-	using SLDataGateway.API.Types.Results.Paging;
-	using System.Xml.Linq;
+	using Skyline.DataMiner.Core.DataMinerSystem.Common;
+	using Skyline.DataMiner.Net;
+	using Skyline.DataMiner.Net.Messages;
 
 	[GQIMetaData(Name = "NimbraDestinations")]
-	public class MyDataSource : IGQIDataSource, IGQIInputArguments
+	public class MyDataSource : IGQIDataSource, IGQIInputArguments, IGQIOnInit
 	{
-		private GQIDoubleArgument _argument = new GQIDoubleArgument("Age") { IsRequired = true };
-		private double _minimumAge;
+		private GQIStringArgument _argument = new GQIStringArgument("Purpose Filter") { IsRequired = true };
+		private string _purposeFilter = string.Empty;
+		private IDms _dms;
 
 		public GQIColumn[] GetColumns()
 		{
 			return new GQIColumn[]
 			{
-			new GQIStringColumn("Name"),
-			new GQIIntColumn("Age"),
-			new GQIDoubleColumn("Height (m)"),
-			new GQIDateTimeColumn("Birthday"),
-			new GQIBooleanColumn("Likes apples")
+			new GQIStringColumn("ID"),
+			new GQIStringColumn("Src Node"),
+			new GQIStringColumn("Src TTP Purpose"),
+			new GQIStringColumn("Src DSTI"),
+			new GQIIntColumn("Src Customer ID"),
+			new GQIStringColumn("Type"),
+			new GQIStringColumn("Oper Status"),
+			new GQIStringColumn("Dest Node"),
+			new GQIStringColumn("Dest TTP "),
 			};
 		}
 
@@ -89,7 +89,7 @@ namespace GetDestinationServicesNimbra_1
 
 		public OnArgumentsProcessedOutputArgs OnArgumentsProcessed(OnArgumentsProcessedInputArgs args)
 		{
-			_minimumAge = args.GetArgumentValue(_argument);
+			_purposeFilter = args.GetArgumentValue(_argument);
 			return new OnArgumentsProcessedOutputArgs();
 		}
 
@@ -125,12 +125,63 @@ namespace GetDestinationServicesNimbra_1
 					})
 			};
 
-			var filteredRows = rows.Where(row => (int)row.Cells[1].Value > _minimumAge).ToArray();
+			var filteredRows = rows.Where(row => (int)row.Cells[1].Value > 12).ToArray();
 
 			return new GQIPage(filteredRows)
 			{
 				HasNextPage = false
 			};
+		}
+
+		public OnInitOutputArgs OnInit(OnInitInputArgs args)
+		{
+			_dms = DmsFactory.CreateDms(new GqiConnection(args.DMS));
+			return new OnInitOutputArgs();
+		}
+
+		public class GqiConnection : ICommunication
+		{
+			private readonly GQIDMS _gqiDms;
+
+			public GqiConnection(GQIDMS gqiDms)
+			{
+				_gqiDms = gqiDms ?? throw new ArgumentNullException(nameof(gqiDms));
+			}
+
+			public DMSMessage[] SendMessage(DMSMessage message)
+			{
+				return new[] { _gqiDms.SendMessage(message) };
+			}
+
+			public DMSMessage SendSingleResponseMessage(DMSMessage message)
+			{
+				return _gqiDms.SendMessage(message);
+			}
+
+			public DMSMessage SendSingleRawResponseMessage(DMSMessage message)
+			{
+				return _gqiDms.SendMessage(message);
+			}
+
+			public void AddSubscriptionHandler(NewMessageEventHandler handler)
+			{
+				throw new NotImplementedException();
+			}
+
+			public void AddSubscriptions(NewMessageEventHandler handler, string handleGuid, SubscriptionFilter[] subscriptions)
+			{
+				throw new NotImplementedException();
+			}
+
+			public void ClearSubscriptionHandler(NewMessageEventHandler handler)
+			{
+				throw new NotImplementedException();
+			}
+
+			public void ClearSubscriptions(NewMessageEventHandler handler, string handleGuid, bool replaceWithEmpty = false)
+			{
+				throw new NotImplementedException();
+			}
 		}
 	}
 }
